@@ -37,8 +37,19 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // We use the stable-diffusion-xl-lightning model for extremely fast, high-quality generation
-        const restApiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning`;
+        let modelId = "@cf/bytedance/stable-diffusion-xl-lightning";
+        const requestPayload: Record<string, any> = { prompt };
+
+        if (hasPhoto) {
+            // Route to the true image-to-image model
+            modelId = "@cf/runwayml/stable-diffusion-v1-5-img2img";
+            const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+            requestPayload.image_b64 = imageBuffer.toString("base64");
+            // Add guidance strength to preserve image features (values range 0-1)
+            requestPayload.strength = 0.6;
+        }
+
+        const restApiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelId}`;
 
         const res = await fetch(restApiUrl, {
             method: "POST",
@@ -46,7 +57,7 @@ export async function POST(req: NextRequest) {
                 "Authorization": `Bearer ${apiToken}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ prompt }),
+            body: JSON.stringify(requestPayload),
         });
 
         if (!res.ok) {
