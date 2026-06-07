@@ -13,6 +13,8 @@ import {
     Loader2,
     AlertCircle,
     Image as ImageIcon,
+    Download,
+    Mail,
 } from "lucide-react";
 
 // For client-side Puter.js integration, we define everything here.
@@ -209,6 +211,19 @@ function CheckoutStep({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [email, setEmail] = useState("");
+    const [emailLoading, setEmailLoading] = useState(false);
+    const [emailSent, setEmailSent] = useState(false);
+
+    const handleSendEmail = async () => {
+        if (!email) return;
+        setEmailLoading(true);
+        // Simulate sending email backend request
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setEmailLoading(false);
+        setEmailSent(true);
+    };
+
     const handleGenerate = async () => {
         setLoading(true);
         setError(null);
@@ -370,13 +385,42 @@ function CheckoutStep({
                     )}
                 </button>
             ) : (
-                <button
-                    className="w-full py-5 rounded-full font-black text-black text-xl flex items-center justify-center gap-3 transition-all duration-200 active:scale-[0.98] glow-yellow hover:brightness-110 mb-3"
-                    style={{ background: "linear-gradient(135deg, #FFD60A 0%, #FF9500 100%)" }}
-                >
-                    Ship to Me — $14.99
-                    <ChevronRight size={20} />
-                </button>
+                <div className="flex flex-col gap-3 mb-3">
+                    <a
+                        href={generatedUrl}
+                        download={`DAVAY_${model.name.replace(" ", "_")}_Lighter.png`}
+                        className="w-full py-4 rounded-full font-black text-black text-lg flex items-center justify-center gap-3 transition-all duration-200 active:scale-[0.98] hover:brightness-110 glow-yellow"
+                        style={{ background: "linear-gradient(135deg, #FFD60A 0%, #FF9500 100%)" }}
+                    >
+                        <Download size={22} />
+                        Download Lighter Art
+                    </a>
+
+                    {emailSent ? (
+                        <div className="w-full py-4 rounded-full font-bold text-sm text-[#00FF66] flex items-center justify-center gap-2" style={{ background: "rgba(0,255,102,0.1)", border: "1px solid rgba(0,255,102,0.2)" }}>
+                            <Check size={18} /> Sent! Check your inbox.
+                        </div>
+                    ) : (
+                        <div className="flex gap-2">
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                placeholder="Send to email..."
+                                className="flex-1 bg-white/5 border border-white/10 rounded-full px-5 py-4 text-sm text-white placeholder-white/30 outline-none focus:border-[#FFD60A] transition-colors"
+                            />
+                            <button
+                                onClick={handleSendEmail}
+                                disabled={emailLoading || !email}
+                                className="px-6 py-4 rounded-full font-bold text-sm text-black flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{ background: "#FFD60A" }}
+                            >
+                                {emailLoading ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />}
+                                Send
+                            </button>
+                        </div>
+                    )}
+                </div>
             )}
 
             {generatedUrl && (
