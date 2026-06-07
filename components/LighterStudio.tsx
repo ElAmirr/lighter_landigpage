@@ -17,54 +17,43 @@ import {
     Mail,
 } from "lucide-react";
 
-// For client-side Puter.js integration, we define everything here.
-const STYLE_PROMPTS: Record<string, string> = {
-    cyberpunk:
-        "A neon cyberpunk style lighter wrap design. Electric neon cyan and magenta glitch effects, digital grid lines, holographic circuits, and a cyberpunk city skyline in the background. Bold 'DAVAY' text in an electric glitch font. Very dark background with vivid neon lights. High quality product wrap art, vertical composition.",
-    anime:
-        "A Tokyo anime cel-shaded lighter wrap design. Vibrant Japanese anime art style, cherry blossom petals cascading, dynamic action lines, bold manga ink outlines, pastel sakura pink and golden tones. Bold 'DAVAY' text in an anime-style font. High quality product wrap art, vertical composition.",
-    streetart:
-        "A gritty urban street art graffiti lighter wrap design. Raw spray paint drips, stencil graffiti textures, concrete wall texture visible, bold color blocking in orange, yellow and red. Street tag 'DAVAY' in large graffiti letters. High quality product wrap art, vertical composition.",
-};
-
-const PORTRAIT_SUFFIX =
-    " In the center of the design, feature a stylized illustrated portrait of a person rendered in the described art style — abstract, artistic, and integrated into the overall composition.";
+// Removed legacy client-side constants
 
 const AI_MODELS = [
     {
-        id: "cyberpunk",
-        name: "Neon Cyberpunk",
+        id: "streetart",
+        name: "Urban Graffiti",
         number: "01",
-        description: "Glitch aesthetics, neon grids, and electric circuits fused with your portrait.",
-        vibe: "ELECTRIC",
-        colors: ["#00FFFF", "#FF00FF", "#FFD60A"],
+        description: "Bold urban street-art illustration inspired by modern graffiti culture.",
+        vibe: "STREET",
+        colors: ["#FFD60A", "#FF7A00", "#FFFFFF"],
         preview: {
-            bg: "linear-gradient(135deg, #0a0a1a 0%, #001a2e 50%, #1a0a2e 100%)",
-            accent: "#00FFFF",
+            bg: "linear-gradient(135deg, #1a1000 0%, #2a1800 50%, #0f0f0f 100%)",
+            accent: "#FF7A00",
         },
     },
     {
         id: "anime",
-        name: "Tokyo Anime",
+        name: "Anime Neon",
         number: "02",
-        description: "Vibrant cel-shaded art with dynamic line art, cherry blossoms, and manga ink.",
-        vibe: "VIBRANT",
-        colors: ["#FF6B9D", "#FFD60A", "#A78BFA"],
+        description: "Stylish anime-inspired character illustration with dynamic neon energy effects.",
+        vibe: "NEON",
+        colors: ["#FFD60A", "#FF6B9D", "#00FFFF"],
         preview: {
             bg: "linear-gradient(135deg, #1a0810 0%, #2a0a20 50%, #10101a 100%)",
-            accent: "#FF6B9D",
+            accent: "#FFD60A",
         },
     },
     {
-        id: "streetart",
-        name: "Gritty Street-Art",
+        id: "luxurygold",
+        name: "Luxury Gold",
         number: "03",
-        description: "Raw graffiti textures, spray paint drips, and bold urban typography overlays.",
-        vibe: "RAW",
-        colors: ["#FF7A00", "#FFD60A", "#FF3B3B"],
+        description: "Luxury black and gold collectible portrait with elegant metallic reflections.",
+        vibe: "PREMIUM",
+        colors: ["#FFD700", "#FFA500", "#111111"],
         preview: {
-            bg: "linear-gradient(135deg, #1a1000 0%, #2a1800 50%, #0f0f0f 100%)",
-            accent: "#FF7A00",
+            bg: "linear-gradient(135deg, #1a1500 0%, #2a2000 50%, #111111 100%)",
+            accent: "#FFD700",
         },
     },
 ];

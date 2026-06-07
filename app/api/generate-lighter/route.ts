@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const STYLE_PROMPTS: Record<string, string> = {
-    cyberpunk:
-        "A neon cyberpunk style lighter wrap design. Electric neon cyan and magenta glitch effects, digital grid lines, holographic circuits, and a cyberpunk city skyline in the background. Bold 'DAVAY' text in an electric glitch font. Very dark background with vivid neon lights. High quality product wrap art, vertical composition.",
-    anime:
-        "A Tokyo anime cel-shaded lighter wrap design. Vibrant Japanese anime art style, cherry blossom petals cascading, dynamic action lines, bold manga ink outlines, pastel sakura pink and golden tones. Bold 'DAVAY' text in an anime-style font. High quality product wrap art, vertical composition.",
     streetart:
-        "A gritty urban street art graffiti lighter wrap design. Raw spray paint drips, stencil graffiti textures, concrete wall texture visible, bold color blocking in orange, yellow and red. Street tag 'DAVAY' in large graffiti letters. High quality product wrap art, vertical composition.",
+        "Use the uploaded portrait as the primary subject. Preserve the person's facial identity, hairstyle, facial expression, and overall appearance with high accuracy. Transform the portrait into a bold urban street-art illustration inspired by modern graffiti culture. Style requirements: High contrast, Vibrant yellow, orange, black and white palette, Spray paint textures, Graffiti lettering, Paint splashes, Urban wall textures, Dynamic lighting, Bold outlines, Modern streetwear aesthetic, Premium collectible design. The background must be transparent. The composition must be vertical and centered to perfectly fit a standard disposable lighter. Leave a clean empty area near the bottom for adding a QR code and logo later. Do not crop the face. Do not distort facial features. The final artwork must feel like a premium collectible designer lighter rather than a simple portrait. Ultra-high detail. Print-ready. Transparent PNG.",
+    anime:
+        "Use the uploaded portrait as the reference. Maintain the person's identity while transforming them into a stylish anime-inspired character. Requirements: Modern anime illustration, Cinematic lighting, Neon yellow and orange glow, Black background elements, Dynamic energy effects, Clean line art, Soft gradients, Premium digital painting, Confident facial expression, Slightly exaggerated but recognizable features, Vibrant eyes, Stylish clothing enhancement. The design should look like a limited-edition collectible lighter. The artwork must be centered vertically with generous spacing. Background must be fully transparent. Leave empty space near the bottom for future QR code placement. No text. No watermark. No border. Ultra-high resolution. Print-ready PNG.",
+    luxurygold:
+        "Use the uploaded portrait while preserving the person's identity. Create a luxury collectible portrait suitable for printing on a premium lighter. Style: Black and gold, Elegant metallic reflections, Premium illustration, Luxury fashion editorial aesthetic, Gold geometric shapes, Minimalistic composition, Subtle smoke effects, Dramatic studio lighting, High-end product branding style, Rich shadows, Premium texture. The portrait should occupy approximately 70% of the lighter's printable area. The background must remain transparent. Reserve a clean area near the bottom for a QR code and brand logo. No text. No watermark. No frame. Ultra-realistic digital illustration. Premium collector edition. High-resolution transparent PNG optimized for physical printing.",
 };
-
-const PORTRAIT_SUFFIX =
-    " In the center of the design, feature a stylized illustrated portrait of a person rendered in the described art style — abstract, artistic, and integrated into the overall composition.";
 
 export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
-        const style = (formData.get("style") as string) ?? "cyberpunk";
+        const style = (formData.get("style") as string) ?? "streetart";
         const imageFile = formData.get("image") as File | null;
 
         // Using Cloudflare native REST API directly
@@ -29,8 +26,16 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        let prompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.streetart;
+
+        // If the user didn't upload a photo, adjust the prompt slightly to avoid confusing the AI
         const hasPhoto = imageFile && imageFile.size > 0;
-        const prompt = STYLE_PROMPTS[style] + (hasPhoto ? PORTRAIT_SUFFIX : "");
+        if (!hasPhoto) {
+            prompt = prompt.replace(
+                /Use the uploaded portrait.*?identity(\.| )/ig,
+                "Create a striking, highly detailed original portrait of an urban youth. "
+            );
+        }
 
         // We use the stable-diffusion-xl-lightning model for extremely fast, high-quality generation
         const restApiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning`;
