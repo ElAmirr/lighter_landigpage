@@ -48,7 +48,7 @@ const AI_MODELS = [
         id: "luxurygold",
         name: "Luxury Gold",
         number: "03",
-        description: "Luxury black and gold collectible portrait with elegant metallic reflections.",
+        description: "make just a small change on the oreginal photo.",
         vibe: "PREMIUM",
         colors: ["#FFD700", "#FFA500", "#111111"],
         preview: {
