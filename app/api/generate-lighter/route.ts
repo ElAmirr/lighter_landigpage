@@ -18,12 +18,13 @@ export async function POST(req: NextRequest) {
         const style = (formData.get("style") as string) ?? "cyberpunk";
         const imageFile = formData.get("image") as File | null;
 
-        const workerUrl = process.env.CLOUDFLARE_WORKER_URL;
-        const apiKey = process.env.CLOUDFLARE_API_KEY;
+        // Using Cloudflare native REST API directly
+        const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+        const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 
-        if (!workerUrl || !apiKey) {
+        if (!accountId || !apiToken) {
             return NextResponse.json(
-                { error: "Cloudflare Worker URL or API Key missing. Please check .env.local" },
+                { error: "Cloudflare credentials missing. Please set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN" },
                 { status: 400 }
             );
         }
@@ -31,11 +32,13 @@ export async function POST(req: NextRequest) {
         const hasPhoto = imageFile && imageFile.size > 0;
         const prompt = STYLE_PROMPTS[style] + (hasPhoto ? PORTRAIT_SUFFIX : "");
 
-        // Cloudflare Workers AI call
-        const res = await fetch(workerUrl, {
+        // We use the stable-diffusion-xl-lightning model for extremely fast, high-quality generation
+        const restApiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning`;
+
+        const res = await fetch(restApiUrl, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
+                "Authorization": `Bearer ${apiToken}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({ prompt }),
@@ -43,7 +46,14 @@ export async function POST(req: NextRequest) {
 
         if (!res.ok) {
             const errText = await res.text();
-            throw new Error(`Cloudflare API Error (${res.status}): ${errText}`);
+            let parsedErr = errText;
+            try {
+                const json = JSON.parse(errText);
+                parsedErr = json.errors?.[0]?.message || errText;
+            } catch (e) {
+                // If it's not JSON, use raw text
+            }
+            throw new Error(`Cloudflare API Error (${res.status}): ${parsedErr}`);
         }
 
         // Cloudflare returns the raw image blob natively
