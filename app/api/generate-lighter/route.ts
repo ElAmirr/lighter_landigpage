@@ -9,6 +9,12 @@ const STYLE_PROMPTS: Record<string, string> = {
         "Use the uploaded portrait while preserving the person's identity. Create a luxury collectible portrait suitable for printing on a premium lighter. Style: Black and gold, Elegant metallic reflections, Premium illustration, Luxury fashion editorial aesthetic, Gold geometric shapes, Minimalistic composition, Subtle smoke effects, Dramatic studio lighting, High-end product branding style, Rich shadows, Premium texture. The portrait should occupy approximately 70% of the lighter's printable area. The background must remain transparent. Reserve a clean area near the bottom for a QR code and brand logo. No text. No watermark. No frame. Ultra-realistic digital illustration. Premium collector edition. High-resolution transparent PNG optimized for physical printing.",
 };
 
+const STYLE_STRENGTHS: Record<string, number> = {
+    streetart: 0.65, // Higher change to make it look like graffiti
+    anime: 0.60, // Moderate change to look like anime
+    luxurygold: 0.35, // Low change: keeps it mostly original, just adds gold lighting/effects
+};
+
 export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
@@ -46,7 +52,7 @@ export async function POST(req: NextRequest) {
             const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
             requestPayload.image_b64 = imageBuffer.toString("base64");
             // Add guidance strength to preserve image features (values range 0-1)
-            requestPayload.strength = 0.6;
+            requestPayload.strength = STYLE_STRENGTHS[style] || 0.6;
         }
 
         const restApiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelId}`;
