@@ -10,11 +10,23 @@ import {
     Sparkles,
     Upload,
     Check,
-    Key,
     Loader2,
     AlertCircle,
     Image as ImageIcon,
 } from "lucide-react";
+
+// For client-side Puter.js integration, we define everything here.
+const STYLE_PROMPTS: Record<string, string> = {
+    cyberpunk:
+        "A neon cyberpunk style lighter wrap design. Electric neon cyan and magenta glitch effects, digital grid lines, holographic circuits, and a cyberpunk city skyline in the background. Bold 'DAVAY' text in an electric glitch font. Very dark background with vivid neon lights. High quality product wrap art, vertical composition.",
+    anime:
+        "A Tokyo anime cel-shaded lighter wrap design. Vibrant Japanese anime art style, cherry blossom petals cascading, dynamic action lines, bold manga ink outlines, pastel sakura pink and golden tones. Bold 'DAVAY' text in an anime-style font. High quality product wrap art, vertical composition.",
+    streetart:
+        "A gritty urban street art graffiti lighter wrap design. Raw spray paint drips, stencil graffiti textures, concrete wall texture visible, bold color blocking in orange, yellow and red. Street tag 'DAVAY' in large graffiti letters. High quality product wrap art, vertical composition.",
+};
+
+const PORTRAIT_SUFFIX =
+    " In the center of the design, feature a stylized illustrated portrait of a person rendered in the described art style — abstract, artistic, and integrated into the overall composition.";
 
 const AI_MODELS = [
     {
@@ -183,18 +195,14 @@ function ModelStep({ selected, onSelect }: { selected: string | null; onSelect: 
 }
 
 // ──────────────────────────────────────────────
-// Step 3: Generate & Checkout
+// Step 3: Generate & Checkout (Puter.js integration)
 // ──────────────────────────────────────────────
 function CheckoutStep({
     file,
     modelId,
-    apiKey,
-    onApiKeyChange,
 }: {
     file: File | null;
     modelId: string | null;
-    apiKey: string;
-    onApiKeyChange: (k: string) => void;
 }) {
     const model = AI_MODELS.find((m) => m.id === modelId) ?? AI_MODELS[0];
     const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
@@ -206,18 +214,25 @@ function CheckoutStep({
         setError(null);
         setGeneratedUrl(null);
         try {
-            const fd = new FormData();
-            fd.append("style", model.id);
-            if (apiKey.trim()) fd.append("apiKey", apiKey.trim());
-            if (file) fd.append("image", file);
+            // 1. Prepare prompt
+            const stylePrompt = STYLE_PROMPTS[model.id] ?? STYLE_PROMPTS.cyberpunk;
+            const prompt = stylePrompt + (file ? PORTRAIT_SUFFIX : "");
 
-            const res = await fetch("/api/generate-lighter", { method: "POST", body: fd });
-            const data = await res.json();
+            // 2. Import puter.js dynamically
+            // @ts-ignore
+            const { puter } = await import('@heyputer/puter.js');
 
-            if (!res.ok) throw new Error(data.error ?? "Generation failed");
-            setGeneratedUrl(data.imageUrl);
+            // 3. Generate image using dall-e-3 via puter.js
+            const imageElement = await puter.ai.txt2img(prompt, { model: 'dall-e-3' });
+
+            // 4. Extract base64 src from the generated HTMLImageElement
+            if (imageElement && imageElement.src) {
+                setGeneratedUrl(imageElement.src);
+            } else {
+                throw new Error("Puter.js did not return a valid image.");
+            }
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : "Unknown error");
+            setError(e instanceof Error ? e.message : "Generation failed. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -233,31 +248,8 @@ function CheckoutStep({
         >
             <h3 className="text-2xl font-black text-white mb-1">Generate Your Lighter</h3>
             <p className="text-white/50 text-sm mb-6">
-                AI will generate the artwork for your custom lighter wrap. Ready to ship in 5 days.
+                AI will generate the artwork for your custom lighter wrap for free via Puter.js.
             </p>
-
-            {/* API key input */}
-            <div className="mb-5">
-                <label className="flex items-center gap-2 text-xs font-bold text-white/40 uppercase tracking-widest mb-2">
-                    <Key size={12} />
-                    OpenAI API Key
-                    <span className="normal-case text-white/20 font-normal tracking-normal">(or set OPENAI_API_KEY in .env.local)</span>
-                </label>
-                <input
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => onApiKeyChange(e.target.value)}
-                    placeholder="sk-..."
-                    className="w-full rounded-xl px-4 py-3 text-sm font-mono text-white outline-none transition-all duration-200"
-                    style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        caretColor: "#FFD60A",
-                    }}
-                    onFocus={(e) => { e.currentTarget.style.border = "1px solid rgba(255,214,10,0.4)"; e.currentTarget.style.boxShadow = "0 0 15px rgba(255,214,10,0.1)"; }}
-                    onBlur={(e) => { e.currentTarget.style.border = "1px solid rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
-                />
-            </div>
 
             {/* Preview area */}
             <div
@@ -274,7 +266,7 @@ function CheckoutStep({
                         <Loader2 size={36} color={model.preview.accent} className="animate-spin" />
                         <div className="text-center">
                             <p className="font-bold text-white text-sm">Generating your lighter art…</p>
-                            <p className="text-xs text-white/40 mt-1">This usually takes 10–20 seconds</p>
+                            <p className="text-xs text-white/40 mt-1">Free generation via Puter.js</p>
                         </div>
                     </div>
                 ) : generatedUrl ? (
@@ -283,24 +275,17 @@ function CheckoutStep({
                         <div className="flex items-center justify-center gap-6 p-6">
                             <div className="relative flex-shrink-0">
                                 <svg width="90" height="160" viewBox="0 0 120 200" fill="none">
-                                    {/* Lighter body mask */}
                                     <defs>
                                         <clipPath id="lighterClip">
                                             <rect x="10" y="60" width="100" height="130" rx="12" />
                                         </clipPath>
                                     </defs>
-                                    {/* Body bg */}
                                     <rect x="10" y="60" width="100" height="130" rx="12" fill="#1a1a1e" />
-                                    {/* AI generated art fills the body */}
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <image href={generatedUrl} x="10" y="60" width="100" height="130" clipPath="url(#lighterClip)" preserveAspectRatio="xMidYMid slice" />
-                                    {/* Overlay gradient for edge realism */}
                                     <rect x="10" y="60" width="100" height="130" rx="12" fill="url(#edgeFade)" />
-                                    {/* Top cap */}
                                     <rect x="22" y="35" width="76" height="35" rx="8" fill="#2A2A2E" />
-                                    {/* Flame */}
                                     <path d="M60 5 C55 10 50 18 54 22 C56 16 58 18 60 12 C62 18 64 16 66 22 C70 18 65 10 60 5Z" fill={model.preview.accent} opacity="0.95" />
-                                    {/* Lighter body border */}
                                     <rect x="10" y="60" width="100" height="130" rx="12" fill="none" stroke={model.preview.accent} strokeWidth="1.5" strokeOpacity="0.5" />
                                     <defs>
                                         <linearGradient id="edgeFade" x1="10" y1="60" x2="110" y2="190" gradientUnits="userSpaceOnUse">
@@ -323,7 +308,6 @@ function CheckoutStep({
                                 </div>
                             </div>
                         </div>
-                        {/* Full art preview below */}
                         <div className="px-4 pb-4">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
@@ -336,7 +320,6 @@ function CheckoutStep({
                         </div>
                     </div>
                 ) : (
-                    /* Default placeholder */
                     <div className="flex items-center gap-6 p-8">
                         <svg width="80" height="140" viewBox="0 0 120 200" fill="none">
                             <rect x="10" y="60" width="100" height="130" rx="12" fill="rgba(255,255,255,0.06)" stroke={model.preview.accent} strokeWidth="1.5" strokeOpacity="0.4" />
@@ -376,9 +359,9 @@ function CheckoutStep({
                     }}
                 >
                     {loading ? (
-                        <><Loader2 size={18} className="animate-spin" /> Generating AI Art…</>
+                        <><Loader2 size={18} className="animate-spin" /> Generating AI Art Free via Puter.js…</>
                     ) : (
-                        <><Sparkles size={18} /> Generate My Lighter Art</>
+                        <><Sparkles size={18} /> Generate For Free</>
                     )}
                 </button>
             ) : (
@@ -403,7 +386,7 @@ function CheckoutStep({
             {/* Perks */}
             <div className="grid grid-cols-3 gap-3 mt-2">
                 {[
-                    { icon: Zap, label: "AI Generated", sub: "Unique to you" },
+                    { icon: Zap, label: "AI Generated", sub: "Powered by Puter.js" },
                     { icon: Truck, label: "Ships in 5 Days", sub: "Free shipping" },
                     { icon: Sparkles, label: "QR Activated", sub: "Play-ready" },
                 ].map(({ icon: Icon, label, sub }) => (
@@ -426,7 +409,6 @@ export default function LighterStudio() {
     const [step, setStep] = useState(0);
     const [file, setFile] = useState<File | null>(null);
     const [model, setModel] = useState<string | null>(null);
-    const [apiKey, setApiKey] = useState("");
 
     const canAdvance =
         step === 0 || // step 0: always can skip (photo is optional)
@@ -443,7 +425,6 @@ export default function LighterStudio() {
             <div className="absolute top-0 left-0 w-[300px] h-[300px] rounded-full opacity-10 blur-3xl pointer-events-none" style={{ background: "radial-gradient(circle, #FFD60A 0%, transparent 70%)" }} />
 
             <div className="relative z-10 container mx-auto px-6">
-                {/* Section header */}
                 <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
                     <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-2 mb-6">
                         <Sparkles size={14} color="#FFD60A" />
@@ -453,13 +434,11 @@ export default function LighterStudio() {
                         Create Your<br /><span className="gradient-text">Own Piece.</span>
                     </h2>
                     <p className="text-white/50 text-lg mt-4 max-w-md mx-auto">
-                        Design a custom AI-generated lighter. We print it, ship it, and activate its QR code so you enter the game from day one.
+                        Design a custom AI-generated lighter right in your browser. Powered by Puter.js — completely free!
                     </p>
                 </motion.div>
 
-                {/* Studio wizard */}
                 <motion.div className="max-w-2xl mx-auto" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.2 }}>
-                    {/* Step indicator */}
                     <div className="flex items-center justify-between mb-8">
                         {STEPS.map((label, idx) => (
                             <button
@@ -484,7 +463,6 @@ export default function LighterStudio() {
                         ))}
                     </div>
 
-                    {/* Progress bar */}
                     <div className="w-full h-0.5 mb-8 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
                         <motion.div
                             className="h-full rounded-full"
@@ -494,15 +472,13 @@ export default function LighterStudio() {
                         />
                     </div>
 
-                    {/* Content card */}
                     <div className="rounded-3xl p-8 lg:p-10" style={{ background: "rgba(27,27,31,0.9)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(20px)" }}>
                         <AnimatePresence mode="wait">
                             {step === 0 && <UploadStep file={file} onFile={setFile} />}
                             {step === 1 && <ModelStep selected={model} onSelect={setModel} />}
-                            {step === 2 && <CheckoutStep file={file} modelId={model} apiKey={apiKey} onApiKeyChange={setApiKey} />}
+                            {step === 2 && <CheckoutStep file={file} modelId={model} />}
                         </AnimatePresence>
 
-                        {/* Navigation */}
                         <div className="flex items-center justify-between mt-8 pt-6" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                             <button
                                 onClick={() => setStep((s) => Math.max(0, s - 1))}
