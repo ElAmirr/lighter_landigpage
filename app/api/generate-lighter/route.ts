@@ -33,29 +33,25 @@ export async function POST(req: NextRequest) {
         let imageUrl: string;
 
         if (imageFile && imageFile.size > 0) {
-            // Use gpt-image-1 image editing if a photo was uploaded
+            // Use dall-e-2 image editing when a photo is uploaded
             const imageBytes = await imageFile.arrayBuffer();
             const imageBuffer = Buffer.from(imageBytes);
-            const oaiFile = await toFile(imageBuffer, imageFile.name, { type: imageFile.type });
+            // dall-e-2 edit requires a PNG file
+            const oaiFile = await toFile(imageBuffer, "upload.png", { type: "image/png" });
 
-            const prompt = `${stylePrompt} The central artwork is based on the provided portrait photo — stylize the face/subject in the described artistic style and integrate it as the focal point of the lighter wrap design.`;
+            const prompt = `${stylePrompt} The central artwork is based on the provided portrait — stylize the subject in the described artistic style as the focal point of the lighter wrap design.`;
 
             const response = await openai.images.edit({
-                model: "gpt-image-1",
+                model: "dall-e-2",
                 image: oaiFile,
                 prompt,
+                n: 1,
                 size: "1024x1024",
             });
 
             const imageData = response.data?.[0];
             if (!imageData) throw new Error("No image returned from API");
-
-            // gpt-image-1 returns base64 by default
-            if (imageData.b64_json) {
-                imageUrl = `data:image/png;base64,${imageData.b64_json}`;
-            } else {
-                imageUrl = imageData.url ?? "";
-            }
+            imageUrl = imageData.url ?? "";
         } else {
             // Text-to-image with DALL-E 3 when no photo
             const response = await openai.images.generate({
@@ -64,7 +60,6 @@ export async function POST(req: NextRequest) {
                 size: "1024x1024",
                 quality: "standard",
                 n: 1,
-                response_format: "url",
             });
 
             imageUrl = response.data?.[0]?.url ?? "";
