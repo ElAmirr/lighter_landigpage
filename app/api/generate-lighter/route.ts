@@ -283,6 +283,13 @@ export async function POST(req: NextRequest) {
             } catch {
                 // raw text fallback
             }
+
+            // Handle insufficient-balance specially so the client can show actionable info
+            if (submitRes.status === 402) {
+                console.error("[generate-lighter] apimart insufficient balance:", parsedErr);
+                return NextResponse.json({ error: `APIMART insufficient balance: ${parsedErr}` }, { status: 402 });
+            }
+
             throw new Error(`apimart.ai submission error (${submitRes.status}): ${parsedErr}`);
         }
 
