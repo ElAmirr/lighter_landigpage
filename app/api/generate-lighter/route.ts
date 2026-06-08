@@ -9,8 +9,184 @@ const STYLE_PROMPTS: Record<string, string> = {
         "Use the uploaded image as the primary reference. Preserve the person's identity with maximum accuracy while transforming the portrait into a luxury collector's edition artwork. Style: Premium black and gold theme, Metallic gold accents, Luxury editorial lighting, Elegant geometric shapes, Rich shadows, Minimalistic premium composition, Soft smoke effects, High-end fashion aesthetic, Premium collectible product design. The portrait should dominate the composition while keeping enough empty space near the bottom for a QR code, product serial number, and brand logo. Background must be completely transparent. No text. No watermark. No frame. Ultra-realistic digital artwork. 8K quality. Print-ready transparent PNG optimized for lighter manufacturing.",
 };
 
+// Extra style keys used by the frontend studio — keep these in sync with the client
+STYLE_PROMPTS["urban-editorial"] = `
+Use the uploaded image as the primary reference.
+
+Preserve the person's identity, facial structure, hairstyle, skin tone and expression while transforming them into an editorial fashion artwork.
+
+Create an ultra realistic urban street fashion collage featuring the uploaded person as the main model.
+
+Style:
+- Urban street fashion collage
+- Young fashion model
+- Graffiti textures
+- Ripped posters
+- Bold typography layers
+- Vibrant colors
+- Harsh dramatic lighting
+- Editorial magazine cover style
+- Dynamic composition
+- High contrast shadows
+- Gritty aesthetic
+- Premium fashion photography
+- Modern youth culture
+- Designer campaign quality
+- Contemporary luxury streetwear
+- Hyper realistic details
+
+The portrait should dominate the composition while remaining perfectly recognizable.
+
+Vertical composition optimized for a lighter.
+
+Transparent background.
+
+Leave the bottom 20% clean for QR code and logo placement.
+
+No watermark.
+
+No text.
+
+Ultra realistic.
+
+8K quality.
+
+PNG with transparent background.
+`;
+
+STYLE_PROMPTS["punk-zine"] = `
+Use the uploaded image as the main subject.
+
+Preserve the person's identity and facial recognition while integrating them into a handmade punk editorial collage.
+
+Create a punk editorial collage poster in a handmade torn-paper zine style.
+
+The uploaded portrait must become the central visual element.
+
+Surround the portrait with:
+
+- Vintage magazine cutouts
+- Torn paper collage
+- Handmade ransom-note typography
+- Screen-print textures
+- DIY protest poster aesthetics
+- Underground magazine layout
+- Dada-inspired cut-paper composition
+- Editorial collage blocks
+- Distressed paper textures
+- Visible paper fibers
+- Worn vintage print
+- Print grain
+- Rough edges
+- Imperfect alignment
+- Misprinted ink
+
+Use bold color blocks:
+
+- Burnt orange
+- Muted red
+- Teal blue
+- Mustard yellow
+- Black
+- Cream
+
+Include surrounding collage elements:
+
+- Butterfly
+- Black bird
+- Eye
+- Lightning bolts
+- Tornado icon
+- Barren tree
+- Cracked dry earth
+- Pollution imagery
+- Garbage textures
+- Light bulb
+- Checkerboard patterns
+- Abstract anarchic symbols
+
+Mood:
+
+- Rebellion
+- Youth unrest
+- Dream vs reality
+- Social criticism
+- Environmental anxiety
+- Mental chaos
+- Raw expressive energy
+
+The uploaded person must remain the hero of the composition.
+
+Vertical 4:5 composition suitable for lighter printing.
+
+Transparent background.
+
+Leave the lower section empty for QR code placement.
+
+No watermark.
+
+No readable text.
+
+Ultra detailed.
+
+Print-ready PNG.
+`;
+
+STYLE_PROMPTS["flash-nightlife"] = `
+Use the uploaded image as the primary reference.
+
+Preserve the person's identity with high facial accuracy.
+
+Transform the portrait into a premium nightlife editorial photograph.
+
+Scene:
+
+- Crowded nightclub
+- Colorful club lighting
+- Strong direct camera flash overpowering ambient lighting
+- Sweaty glowing skin
+- Flash photography effect
+- High ISO grain
+- Candid chaotic energy
+- Vibrant nightlife atmosphere
+- Motion blur in background
+- Cinematic nightlife photography
+- Party aesthetic
+- Editorial magazine quality
+- Authentic flash photography
+- Stylish youth fashion
+- Modern club culture
+
+The uploaded person should remain perfectly recognizable and be the main focus.
+
+The background should feel alive while keeping the subject isolated.
+
+Vertical composition optimized for lighter printing.
+
+Transparent background.
+
+Leave the bottom area clean for QR code and logo.
+
+No text.
+
+No watermark.
+
+Ultra realistic.
+
+8K quality.
+
+PNG with transparent background.
+`;
+
 const APIMART_API_KEY = process.env.APIMART_API_KEY;
 const APIMART_BASE_URL = process.env.APIMART_BASE_URL;
+
+// Ensure this route runs in a Node.js runtime (Buffer usage and long polls require Node features)
+export const runtime = "nodejs";
+
+if (!APIMART_API_KEY || !APIMART_BASE_URL) {
+    console.error("generate-lighter: missing APIMART_API_KEY or APIMART_BASE_URL environment variables");
+}
 
 async function pollTaskResult(taskId: string, maxAttempts = 20): Promise<string> {
     // Wait 15 seconds before first poll as recommended by the API docs
@@ -52,6 +228,13 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData();
         const style = (formData.get("style") as string) ?? "graffiti";
         const imageFile = formData.get("image") as File | null;
+
+        if (!APIMART_API_KEY || !APIMART_BASE_URL) {
+            return NextResponse.json(
+                { error: "Server misconfiguration: missing APIMART_API_KEY or APIMART_BASE_URL" },
+                { status: 500 }
+            );
+        }
 
         let prompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.graffiti;
 
