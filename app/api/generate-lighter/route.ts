@@ -230,23 +230,60 @@ export async function POST(req: NextRequest) {
             (requestPayload as any).image = `data:${mimeType};base64,${base64Image}`;
         }
 
-        const submitRes = await fetch(AIML_URL, {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${AIML_API_KEY}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(requestPayload),
-        });
+        async function submitToAIML(payload: Record<string, unknown>) {
+            const res = await fetch(AIML_URL, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${AIML_API_KEY}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+            });
+            const text = await res.text();
+            let json: any = null;
+            try {
+                json = JSON.parse(text);
+            } catch {
+                json = text;
+            }
+            return { res, json, text };
+        }
+
+        // First attempt with the richer payload
+        let { res: submitRes, json: submitData, text: submitText } = await submitToAIML(requestPayload as any);
+
+        // If the API rejected the payload as invalid, try a minimal payload (some providers are picky)
+        if (!submitRes.ok && submitRes.status === 400 && typeof submitText === "string" && /invalid payload/i.test(submitText)) {
+            console.warn("[generate-lighter] AIML returned 400 Invalid payload — retrying with minimal payload");
+            const minimalPayload: Record<string, unknown> = { model: (requestPayload as any).model, prompt };
+            if (hasPhoto) minimalPayload.image = (requestPayload as any).image;
+            const retry = await submitToAIML(minimalPayload);
+            submitRes = retry.res;
+            submitData = retry.json;
+            submitText = retry.text;
+        }
 
         if (!submitRes.ok) {
-            const errText = await submitRes.text();
-            let parsedErr = errText;
+            let parsedErr = submitText;
             try {
-                const json = JSON.parse(errText);
-                parsedErr = json.error?.message || json.message || errText;
+                parsedErr = submitData?.error?.message || submitData?.message || submitText;
             } catch {
-                // raw text fallback
+                // fallback
+            }
+
+            // Payment required / out of funds — return actionable message and optional dev fallback
+            if (submitRes.status === 403) {
+                const billingUrl = "https://aimlapi.com/app/billing/";
+                console.error("[generate-lighter] AIML out of funds:", parsedErr);
+
+                // Optional developer fallback: return a simple SVG placeholder image so local dev can continue
+                if (process.env.USE_PLACEHOLDER_IMAGE === "1") {
+                    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1400'><rect width='100%' height='100%' fill='%23eee'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='48' fill='%23999'>Placeholder image\n(API out of funds)</text></svg>`;
+                    const b64 = Buffer.from(svg).toString("base64");
+                    return NextResponse.json({ imageUrl: `data:image/svg+xml;base64,${b64}`, note: "placeholder" });
+                }
+
+                return NextResponse.json({ error: parsedErr, billing_url: billingUrl }, { status: 402 });
             }
 
             if (submitRes.status === 402) {
@@ -254,10 +291,9 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: `AIML insufficient balance: ${parsedErr}` }, { status: 402 });
             }
 
+            console.error("[generate-lighter] AIML submission failed:", submitRes.status, parsedErr);
             throw new Error(`AIML submission error (${submitRes.status}): ${parsedErr}`);
         }
-
-        const submitData = await submitRes.json();
 
         // Try to extract common image outputs (url or base64)
         let imageUrl: string | null = null;
