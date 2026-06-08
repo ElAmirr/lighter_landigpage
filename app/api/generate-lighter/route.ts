@@ -179,7 +179,8 @@ PNG with transparent background.
 `;
 
 const AIML_API_KEY = process.env.AIML_API_KEY;
-const AIML_URL = "https://api.aimlapi.com/v1/images/generations";
+const AIML_URL = process.env.AIML_URL || "https://api.aimlapi.com/v1/images/generations";
+const GENAI_API_KEY = process.env.GENAI_API_KEY;
 
 // Ensure this route runs in a Node.js runtime (Buffer usage and long polls require Node features)
 export const runtime = "nodejs";
@@ -211,7 +212,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Build request payload for AIML API
+        // Build generic request payload (used for AIML fallback). Gemini/GenAI path below will construct its own payload.
         const requestPayload: Record<string, unknown> = {
             model: "openai/gpt-image-2",
             prompt,
@@ -228,6 +229,68 @@ export async function POST(req: NextRequest) {
             // to increase compatibility.
             (requestPayload as any).image_urls = [`data:${mimeType};base64,${base64Image}`];
             (requestPayload as any).image = `data:${mimeType};base64,${base64Image}`;
+        }
+
+        // If `GENAI_API_KEY` is present prefer Gemini/Google GenAI SDK.
+        if (GENAI_API_KEY) {
+            try {
+                // Dynamically import the SDK if available. Ignore TS errors if not installed.
+                // @ts-ignore
+                const { GoogleGenAI } = await import("@google/genai");
+                const genai = new GoogleGenAI({ apiKey: GENAI_API_KEY });
+
+                const genPayload: any = {
+                    model: "gemini-image-1",
+                    prompt,
+                    // Keep 9:16 orientation intent; SDK shapes differ between versions.
+                    // The SDK may accept `size` or `width`/`height` — we include a best-effort `size` key.
+                    size: "9:16",
+                    // request a single image
+                    n: 1,
+                };
+
+                if (hasPhoto) genPayload.image = (requestPayload as any).image;
+
+                const genResp: any = await genai.images.generate(genPayload as any);
+
+                // Try common output shapes from various SDK/REST responses
+                let imageUrl: string | null = null;
+                const candidate = genResp?.data?.[0] ?? genResp?.candidates?.[0] ?? genResp?.output?.[0] ?? genResp;
+
+                if (candidate) {
+                    if (candidate.b64_json) imageUrl = `data:image/png;base64,${candidate.b64_json}`;
+                    else if (candidate.image?.b64_json) imageUrl = `data:image/png;base64,${candidate.image.b64_json}`;
+                    else if (candidate.b64) imageUrl = `data:image/png;base64,${candidate.b64}`;
+                    else if (candidate.url) imageUrl = Array.isArray(candidate.url) ? candidate.url[0] : candidate.url;
+                    else if (typeof candidate === "string") imageUrl = candidate;
+                }
+
+                if (imageUrl && /^https?:\/\//i.test(imageUrl)) {
+                    const imageRes = await fetch(imageUrl as string);
+                    if (!imageRes.ok) throw new Error(`Failed to download generated image (${imageRes.status})`);
+                    const imageArrayBuffer = await imageRes.arrayBuffer();
+                    const base64Image = Buffer.from(imageArrayBuffer).toString("base64");
+                    imageUrl = `data:image/png;base64,${base64Image}`;
+                }
+
+                if (!imageUrl) return NextResponse.json({ result: genResp });
+                return NextResponse.json({ imageUrl });
+            } catch (e: any) {
+                const msg = e?.message || String(e);
+                if (/billing|funds|403|permission/i.test(msg)) {
+                    const billingUrl = "https://console.generativeai.google.com/";
+                    console.error("[generate-lighter] GENAI out of funds or permission error:", msg);
+                    if (process.env.USE_PLACEHOLDER_IMAGE === "1") {
+                        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1400'><rect width='100%' height='100%' fill='%23eee'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='48' fill='%23999'>Placeholder image\n(GENAI billing/permission)</text></svg>`;
+                        const b64 = Buffer.from(svg).toString("base64");
+                        return NextResponse.json({ imageUrl: `data:image/svg+xml;base64,${b64}`, note: "placeholder" });
+                    }
+                    return NextResponse.json({ error: msg, billing_url: billingUrl }, { status: 402 });
+                }
+
+                console.error("[generate-lighter] GENAI submission error:", msg);
+                return NextResponse.json({ error: msg }, { status: 500 });
+            }
         }
 
         async function submitToAIML(payload: Record<string, unknown>) {
