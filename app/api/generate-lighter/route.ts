@@ -9,11 +9,43 @@ const STYLE_PROMPTS: Record<string, string> = {
         "Use the uploaded image as the primary reference. Preserve the person's identity with maximum accuracy while transforming the portrait into a luxury collector's edition artwork. Style: Premium black and gold theme, Metallic gold accents, Luxury editorial lighting, Elegant geometric shapes, Rich shadows, Minimalistic premium composition, Soft smoke effects, High-end fashion aesthetic, Premium collectible product design. The portrait should dominate the composition while keeping enough empty space near the bottom for a QR code, product serial number, and brand logo. Background must be completely transparent. No text. No watermark. No frame. Ultra-realistic digital artwork. 8K quality. Print-ready transparent PNG optimized for lighter manufacturing.",
 };
 
-const STYLE_STRENGTHS: Record<string, number> = {
-    graffiti: 0.65,
-    cyberpunk: 0.60,
-    luxury: 0.35,
-};
+const APIMART_API_KEY = process.env.APIMART_API_KEY;
+const APIMART_BASE_URL = process.env.APIMART_BASE_URL;
+
+async function pollTaskResult(taskId: string, maxAttempts = 20): Promise<string> {
+    // Wait 15 seconds before first poll as recommended by the API docs
+    await new Promise((resolve) => setTimeout(resolve, 15000));
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const res = await fetch(`${APIMART_BASE_URL}/tasks/${taskId}`, {
+            headers: {
+                Authorization: `Bearer ${APIMART_API_KEY}`,
+            },
+        });
+
+        if (!res.ok) {
+            throw new Error(`Task poll failed (${res.status}): ${await res.text()}`);
+        }
+
+        const data = await res.json();
+        const status = data?.data?.status;
+
+        if (status === "completed") {
+            const imageUrl = data?.data?.result?.images?.[0]?.url?.[0];
+            if (!imageUrl) throw new Error("Task completed but no image URL found");
+            return imageUrl;
+        }
+
+        if (status === "failed") {
+            throw new Error(`Image generation failed: ${data?.data?.error?.message ?? "Unknown error"}`);
+        }
+
+        // Still processing — wait 4 seconds before next poll
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+    }
+
+    throw new Error("Image generation timed out after maximum polling attempts");
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -21,19 +53,10 @@ export async function POST(req: NextRequest) {
         const style = (formData.get("style") as string) ?? "graffiti";
         const imageFile = formData.get("image") as File | null;
 
-        const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-        const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-
-        if (!accountId || !apiToken) {
-            return NextResponse.json(
-                { error: "Cloudflare credentials missing. Please set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN" },
-                { status: 400 }
-            );
-        }
-
         let prompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.graffiti;
 
         const hasPhoto = imageFile && imageFile.size > 0;
+
         if (!hasPhoto) {
             prompt = prompt.replace(
                 /Use the uploaded image as the (primary )?reference\.\s*/i,
@@ -41,41 +64,63 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        let modelId = "@cf/bytedance/stable-diffusion-xl-lightning";
-        const requestPayload: Record<string, unknown> = { prompt };
+        // Build request payload
+        const requestPayload: Record<string, unknown> = {
+            model: "gpt-image-2",
+            prompt,
+            n: 1,
+            size: "9:16",   // Portrait orientation — ideal for lighter printing
+            resolution: "2k",
+        };
 
+        // Add reference image if provided
         if (hasPhoto) {
-            modelId = "@cf/runwayml/stable-diffusion-v1-5-img2img";
             const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
-            requestPayload.image_b64 = imageBuffer.toString("base64");
-            requestPayload.strength = STYLE_STRENGTHS[style] || 0.6;
+            const base64Image = imageBuffer.toString("base64");
+            const mimeType = imageFile.type || "image/jpeg";
+            requestPayload.image_urls = [`data:${mimeType};base64,${base64Image}`];
         }
 
-        const restApiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelId}`;
-
-        const res = await fetch(restApiUrl, {
+        // Submit generation task
+        const submitRes = await fetch(`${APIMART_BASE_URL}/images/generations`, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${apiToken}`,
+                Authorization: `Bearer ${APIMART_API_KEY}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(requestPayload),
         });
 
-        if (!res.ok) {
-            const errText = await res.text();
+        if (!submitRes.ok) {
+            const errText = await submitRes.text();
             let parsedErr = errText;
             try {
                 const json = JSON.parse(errText);
-                parsedErr = json.errors?.[0]?.message || errText;
+                parsedErr = json.error?.message || errText;
             } catch {
-                // raw text
+                // raw text fallback
             }
-            throw new Error(`Cloudflare API Error (${res.status}): ${parsedErr}`);
+            throw new Error(`apimart.ai submission error (${submitRes.status}): ${parsedErr}`);
         }
 
-        const imageBuffer = await res.arrayBuffer();
-        const base64Image = Buffer.from(imageBuffer).toString("base64");
+        const submitData = await submitRes.json();
+        const taskId = submitData?.data?.[0]?.task_id;
+
+        if (!taskId) {
+            throw new Error("No task_id returned from image generation API");
+        }
+
+        // Poll until the image is ready
+        const hostedImageUrl = await pollTaskResult(taskId);
+
+        // Fetch the image and convert to base64 so the client receives it directly
+        const imageRes = await fetch(hostedImageUrl);
+        if (!imageRes.ok) {
+            throw new Error(`Failed to download generated image (${imageRes.status})`);
+        }
+
+        const imageArrayBuffer = await imageRes.arrayBuffer();
+        const base64Image = Buffer.from(imageArrayBuffer).toString("base64");
         const imageUrl = `data:image/png;base64,${base64Image}`;
 
         return NextResponse.json({ imageUrl });

@@ -25,13 +25,7 @@ export const AI_MODELS = [
         number: "01",
         name: "Urban Editorial",
         vibe: "🔥 STREET",
-        description:
-            "Editorial street fashion collage inspired by graffiti, magazine covers and modern youth culture.",
-        colors: ["#FFD60A", "#FF6B00", "#FFFFFF", "#111111"],
-        preview: {
-            bg: "linear-gradient(135deg,#141414 0%,#2B1808 50%,#0F0F0F 100%)",
-            accent: "#FF6B00",
-        },
+
         prompt: `
 Use the uploaded image as the primary reference.
 
