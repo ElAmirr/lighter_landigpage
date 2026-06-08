@@ -21,133 +21,199 @@ import {
 
 export const AI_MODELS = [
     {
-        id: "street-king",
+        id: "urban-editorial",
         number: "01",
-        name: "Street King",
+        name: "Urban Editorial",
         vibe: "🔥 STREET",
         description:
-            "Turn your photo into a bold graffiti-inspired collectible lighter with urban street art aesthetics.",
-        colors: ["#FFD60A", "#FF7A00", "#FFFFFF"],
+            "Editorial street fashion collage inspired by graffiti, magazine covers and modern youth culture.",
+        colors: ["#FFD60A", "#FF6B00", "#FFFFFF", "#111111"],
         preview: {
-            bg: "linear-gradient(135deg,#1A1000 0%,#2D1700 45%,#101010 100%)",
-            accent: "#FF7A00",
+            bg: "linear-gradient(135deg,#141414 0%,#2B1808 50%,#0F0F0F 100%)",
+            accent: "#FF6B00",
         },
         prompt: `
 Use the uploaded image as the primary reference.
 
-Preserve the person's facial identity, hairstyle, facial proportions and expression.
+Preserve the person's identity, facial structure, hairstyle, skin tone and expression while transforming them into an editorial fashion artwork.
 
-Transform the portrait into premium urban graffiti artwork.
+Create an ultra realistic urban street fashion collage featuring the uploaded person as the main model.
 
 Style:
-- Modern street art
-- Spray paint textures
-- Yellow, orange, black and white palette
-- Bold outlines
-- High contrast
-- Dynamic paint splashes
-- Premium collectible illustration
-- Designer toy aesthetic
-- Youth culture
-- Clean composition
+- Urban street fashion collage
+- Young fashion model
+- Graffiti textures
+- Ripped posters
+- Bold typography layers
+- Vibrant colors
+- Harsh dramatic lighting
+- Editorial magazine cover style
+- Dynamic composition
+- High contrast shadows
+- Gritty aesthetic
+- Premium fashion photography
+- Modern youth culture
+- Designer campaign quality
+- Contemporary luxury streetwear
+- Hyper realistic details
 
-Background must be completely transparent.
+The portrait should dominate the composition while remaining perfectly recognizable.
 
-The artwork must be vertically centered for lighter printing.
+Vertical composition optimized for a lighter.
 
-Leave the bottom 20% empty for a QR code and logo.
+Transparent background.
+
+Leave the bottom 20% clean for QR code and logo placement.
+
+No watermark.
+
+No text.
+
+Ultra realistic.
+
+8K quality.
+
+PNG with transparent background.
+`,
+    },
+
+    {
+        id: "punk-zine",
+        number: "02",
+        name: "Punk Zine",
+        vibe: "⚡ REBEL",
+        description:
+            "DIY punk editorial collage inspired by underground magazines, torn paper posters and vintage protest art.",
+        colors: ["#D86A39", "#C74A44", "#3D8295", "#D8B44A", "#111111"],
+        preview: {
+            bg: "linear-gradient(135deg,#2A1E18 0%,#44251F 55%,#161616 100%)",
+            accent: "#D86A39",
+        },
+        prompt: `
+Use the uploaded image as the main subject.
+
+Preserve the person's identity and facial recognition while integrating them into a handmade punk editorial collage.
+
+Create a punk editorial collage poster in a handmade torn-paper zine style.
+
+The uploaded portrait must become the central visual element.
+
+Surround the portrait with:
+
+- Vintage magazine cutouts
+- Torn paper collage
+- Handmade ransom-note typography
+- Screen-print textures
+- DIY protest poster aesthetics
+- Underground magazine layout
+- Dada-inspired cut-paper composition
+- Editorial collage blocks
+- Distressed paper textures
+- Visible paper fibers
+- Worn vintage print
+- Print grain
+- Rough edges
+- Imperfect alignment
+- Misprinted ink
+
+Use bold color blocks:
+
+- Burnt orange
+- Muted red
+- Teal blue
+- Mustard yellow
+- Black
+- Cream
+
+Include surrounding collage elements:
+
+- Butterfly
+- Black bird
+- Eye
+- Lightning bolts
+- Tornado icon
+- Barren tree
+- Cracked dry earth
+- Pollution imagery
+- Garbage textures
+- Light bulb
+- Checkerboard patterns
+- Abstract anarchic symbols
+
+Mood:
+
+- Rebellion
+- Youth unrest
+- Dream vs reality
+- Social criticism
+- Environmental anxiety
+- Mental chaos
+- Raw expressive energy
+
+The uploaded person must remain the hero of the composition.
+
+Vertical 4:5 composition suitable for lighter printing.
+
+Transparent background.
+
+Leave the lower section empty for QR code placement.
+
+No watermark.
+
+No readable text.
 
 Ultra detailed.
 
-Transparent PNG.
-
-No text.
-
-No watermark.
+Print-ready PNG.
 `,
     },
 
     {
-        id: "neon-rebel",
-        number: "02",
-        name: "Neon Rebel",
-        vibe: "⚡ NEON",
-        description:
-            "Create a futuristic anime portrait with cyberpunk lighting and electric energy.",
-        colors: ["#FFD60A", "#00F5FF", "#FF5CF4"],
-        preview: {
-            bg: "linear-gradient(135deg,#09111D 0%,#001D34 50%,#1A0925 100%)",
-            accent: "#00F5FF",
-        },
-        prompt: `
-Use the uploaded image as the reference.
-
-Keep the person's identity recognizable.
-
-Transform the portrait into a premium cyberpunk anime character.
-
-Style:
-- Japanese anime illustration
-- Neon lighting
-- Electric energy
-- Yellow and cyan glow
-- Sharp cel shading
-- Cinematic composition
-- Premium digital painting
-- Gaming character
-- Futuristic fashion
-- High detail
-
-Background must be transparent.
-
-Vertical composition.
-
-Leave space at the bottom for a QR code and logo.
-
-No text.
-
-No watermark.
-
-Ultra detailed PNG.
-`,
-    },
-
-    {
-        id: "gold-legend",
+        id: "flash-nightlife",
         number: "03",
-        name: "Gold Legend",
-        vibe: "👑 LEGENDARY",
+        name: "Flash Nightlife",
+        vibe: "🌃 NIGHT",
         description:
-            "Luxury collector edition with black & gold styling inspired by premium fashion campaigns.",
-        colors: ["#FFD700", "#D4AF37", "#111111"],
+            "Chaotic nightclub portrait with direct flash, colorful lights and candid nightlife energy.",
+        colors: ["#FF2D55", "#00E5FF", "#FFD60A", "#7A5CFF"],
         preview: {
-            bg: "linear-gradient(135deg,#181300 0%,#2C2100 55%,#101010 100%)",
-            accent: "#FFD700",
+            bg: "linear-gradient(135deg,#090909 0%,#1C102A 45%,#041B2C 100%)",
+            accent: "#FF2D55",
         },
         prompt: `
 Use the uploaded image as the primary reference.
 
-Preserve the person's identity with maximum accuracy.
+Preserve the person's identity with high facial accuracy.
 
-Transform the portrait into a luxury collector's edition artwork.
+Transform the portrait into a premium nightlife editorial photograph.
 
-Style:
-- Black and gold
-- Metallic reflections
-- Luxury editorial photography
-- Premium fashion campaign
-- Elegant geometric accents
-- Soft smoke
-- Dramatic lighting
-- Rich shadows
-- High-end designer aesthetic
-- Premium collectible product
+Scene:
 
-The background must be completely transparent.
+- Crowded nightclub
+- Colorful club lighting
+- Strong direct camera flash overpowering ambient lighting
+- Sweaty glowing skin
+- Flash photography effect
+- High ISO grain
+- Candid chaotic energy
+- Vibrant nightlife atmosphere
+- Motion blur in background
+- Cinematic nightlife photography
+- Party aesthetic
+- Editorial magazine quality
+- Authentic flash photography
+- Stylish youth fashion
+- Modern club culture
+
+The uploaded person should remain perfectly recognizable and be the main focus.
+
+The background should feel alive while keeping the subject isolated.
 
 Vertical composition optimized for lighter printing.
 
-Reserve the bottom area for a QR code and logo.
+Transparent background.
+
+Leave the bottom area clean for QR code and logo.
 
 No text.
 
@@ -155,7 +221,9 @@ No watermark.
 
 Ultra realistic.
 
-8K quality PNG.
+8K quality.
+
+PNG with transparent background.
 `,
     },
 ];
