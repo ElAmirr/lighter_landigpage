@@ -17,14 +17,14 @@ import {
     Mail,
 } from "lucide-react";
 
-// Removed legacy client-side constants
+// Style configurations — IDs match backend STYLE_PROMPTS keys
 
 const AI_MODELS = [
     {
-        id: "streetart",
-        name: "Urban Graffiti",
+        id: "graffiti",
+        name: "Urban Graffiti Edition",
         number: "01",
-        description: "Bold urban street-art illustration inspired by modern graffiti culture.",
+        description: "Bold urban graffiti illustration. Spray paint, yellow & orange palette, high contrast street art.",
         vibe: "STREET",
         colors: ["#FFD60A", "#FF7A00", "#FFFFFF"],
         preview: {
@@ -33,22 +33,22 @@ const AI_MODELS = [
         },
     },
     {
-        id: "anime",
-        name: "Anime Neon",
+        id: "cyberpunk",
+        name: "Cyberpunk Anime Edition",
         number: "02",
-        description: "Stylish anime-inspired character illustration with dynamic neon energy effects.",
+        description: "Premium cyberpunk anime character. Neon glow, cel shading, electric energy effects.",
         vibe: "NEON",
-        colors: ["#FFD60A", "#FF6B9D", "#00FFFF"],
+        colors: ["#FFD60A", "#00FFFF", "#FF6B9D"],
         preview: {
-            bg: "linear-gradient(135deg, #1a0810 0%, #2a0a20 50%, #10101a 100%)",
-            accent: "#FFD60A",
+            bg: "linear-gradient(135deg, #0a0a1a 0%, #001a2e 50%, #1a0a2e 100%)",
+            accent: "#00FFFF",
         },
     },
     {
-        id: "luxurygold",
-        name: "Luxury Gold",
+        id: "luxury",
+        name: "Luxury Gold Collector Edition",
         number: "03",
-        description: "make just a small change on the oreginal photo.",
+        description: "Black & gold luxury editorial art. Metallic reflections, minimalistic premium composition.",
         vibe: "PREMIUM",
         colors: ["#FFD700", "#FFA500", "#111111"],
         preview: {
