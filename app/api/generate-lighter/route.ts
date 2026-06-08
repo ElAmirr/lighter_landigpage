@@ -178,50 +178,17 @@ Ultra realistic.
 PNG with transparent background.
 `;
 
-const APIMART_API_KEY = process.env.APIMART_API_KEY;
-const APIMART_BASE_URL = process.env.APIMART_BASE_URL;
+const AIML_API_KEY = process.env.AIML_API_KEY;
+const AIML_URL = "https://api.aimlapi.com/v1/images/generations";
 
 // Ensure this route runs in a Node.js runtime (Buffer usage and long polls require Node features)
 export const runtime = "nodejs";
 
-if (!APIMART_API_KEY || !APIMART_BASE_URL) {
-    console.error("generate-lighter: missing APIMART_API_KEY or APIMART_BASE_URL environment variables");
+if (!AIML_API_KEY) {
+    console.error("generate-lighter: missing AIML_API_KEY environment variable");
 }
 
-async function pollTaskResult(taskId: string, maxAttempts = 20): Promise<string> {
-    // Wait 15 seconds before first poll as recommended by the API docs
-    await new Promise((resolve) => setTimeout(resolve, 15000));
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const res = await fetch(`${APIMART_BASE_URL}/tasks/${taskId}`, {
-            headers: {
-                Authorization: `Bearer ${APIMART_API_KEY}`,
-            },
-        });
-
-        if (!res.ok) {
-            throw new Error(`Task poll failed (${res.status}): ${await res.text()}`);
-        }
-
-        const data = await res.json();
-        const status = data?.data?.status;
-
-        if (status === "completed") {
-            const imageUrl = data?.data?.result?.images?.[0]?.url?.[0];
-            if (!imageUrl) throw new Error("Task completed but no image URL found");
-            return imageUrl;
-        }
-
-        if (status === "failed") {
-            throw new Error(`Image generation failed: ${data?.data?.error?.message ?? "Unknown error"}`);
-        }
-
-        // Still processing — wait 4 seconds before next poll
-        await new Promise((resolve) => setTimeout(resolve, 4000));
-    }
-
-    throw new Error("Image generation timed out after maximum polling attempts");
-}
+// Using AIML API endpoint directly — no background task polling required.
 
 export async function POST(req: NextRequest) {
     try {
@@ -229,11 +196,8 @@ export async function POST(req: NextRequest) {
         const style = (formData.get("style") as string) ?? "graffiti";
         const imageFile = formData.get("image") as File | null;
 
-        if (!APIMART_API_KEY || !APIMART_BASE_URL) {
-            return NextResponse.json(
-                { error: "Server misconfiguration: missing APIMART_API_KEY or APIMART_BASE_URL" },
-                { status: 500 }
-            );
+        if (!AIML_API_KEY) {
+            return NextResponse.json({ error: "Server misconfiguration: missing AIML_API_KEY" }, { status: 500 });
         }
 
         let prompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.graffiti;
@@ -247,28 +211,29 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Build request payload
+        // Build request payload for AIML API
         const requestPayload: Record<string, unknown> = {
-            model: "gpt-image-2",
+            model: "openai/gpt-image-2",
             prompt,
             n: 1,
-            size: "9:16",   // Portrait orientation — ideal for lighter printing
+            size: "9:16",
             resolution: "2k",
         };
 
-        // Add reference image if provided
         if (hasPhoto) {
             const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
             const base64Image = imageBuffer.toString("base64");
             const mimeType = imageFile.type || "image/jpeg";
-            requestPayload.image_urls = [`data:${mimeType};base64,${base64Image}`];
+            // Many image-generation endpoints accept data URLs in an `image_urls` or `image` field; include both
+            // to increase compatibility.
+            (requestPayload as any).image_urls = [`data:${mimeType};base64,${base64Image}`];
+            (requestPayload as any).image = `data:${mimeType};base64,${base64Image}`;
         }
 
-        // Submit generation task
-        const submitRes = await fetch(`${APIMART_BASE_URL}/images/generations`, {
+        const submitRes = await fetch(AIML_URL, {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${APIMART_API_KEY}`,
+                Authorization: `Bearer ${AIML_API_KEY}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(requestPayload),
@@ -279,39 +244,51 @@ export async function POST(req: NextRequest) {
             let parsedErr = errText;
             try {
                 const json = JSON.parse(errText);
-                parsedErr = json.error?.message || errText;
+                parsedErr = json.error?.message || json.message || errText;
             } catch {
                 // raw text fallback
             }
 
-            // Handle insufficient-balance specially so the client can show actionable info
             if (submitRes.status === 402) {
-                console.error("[generate-lighter] apimart insufficient balance:", parsedErr);
-                return NextResponse.json({ error: `APIMART insufficient balance: ${parsedErr}` }, { status: 402 });
+                console.error("[generate-lighter] AIML insufficient balance:", parsedErr);
+                return NextResponse.json({ error: `AIML insufficient balance: ${parsedErr}` }, { status: 402 });
             }
 
-            throw new Error(`apimart.ai submission error (${submitRes.status}): ${parsedErr}`);
+            throw new Error(`AIML submission error (${submitRes.status}): ${parsedErr}`);
         }
 
         const submitData = await submitRes.json();
-        const taskId = submitData?.data?.[0]?.task_id;
 
-        if (!taskId) {
-            throw new Error("No task_id returned from image generation API");
+        // Try to extract common image outputs (url or base64)
+        let imageUrl: string | null = null;
+        const first = submitData?.data?.[0] ?? submitData?.output?.[0] ?? null;
+
+        if (first) {
+            if (first.url) imageUrl = Array.isArray(first.url) ? first.url[0] : first.url;
+            else if (first.b64_json) imageUrl = `data:image/png;base64,${first.b64_json}`;
+            else if (first.content) imageUrl = first.content;
         }
 
-        // Poll until the image is ready
-        const hostedImageUrl = await pollTaskResult(taskId);
-
-        // Fetch the image and convert to base64 so the client receives it directly
-        const imageRes = await fetch(hostedImageUrl);
-        if (!imageRes.ok) {
-            throw new Error(`Failed to download generated image (${imageRes.status})`);
+        // Fallbacks for other shapes
+        if (!imageUrl && Array.isArray(submitData?.data)) {
+            const candidate = submitData.data.find((d: any) => d?.url || d?.b64_json);
+            if (candidate?.url) imageUrl = Array.isArray(candidate.url) ? candidate.url[0] : candidate.url;
+            else if (candidate?.b64_json) imageUrl = `data:image/png;base64,${candidate.b64_json}`;
         }
 
-        const imageArrayBuffer = await imageRes.arrayBuffer();
-        const base64Image = Buffer.from(imageArrayBuffer).toString("base64");
-        const imageUrl = `data:image/png;base64,${base64Image}`;
+        // If we found a remote URL, fetch and return base64 data URL to the client (so client doesn't need CORS)
+        if (imageUrl && /^https?:\/\//i.test(imageUrl)) {
+            const imageRes = await fetch(imageUrl as string);
+            if (!imageRes.ok) throw new Error(`Failed to download generated image (${imageRes.status})`);
+            const imageArrayBuffer = await imageRes.arrayBuffer();
+            const base64Image = Buffer.from(imageArrayBuffer).toString("base64");
+            imageUrl = `data:image/png;base64,${base64Image}`;
+        }
+
+        // If nothing usable found, return the raw API response for debugging
+        if (!imageUrl) {
+            return NextResponse.json({ result: submitData });
+        }
 
         return NextResponse.json({ imageUrl });
     } catch (err: unknown) {
