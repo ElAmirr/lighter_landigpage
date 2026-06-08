@@ -19,45 +19,146 @@ import {
 
 // Style configurations — IDs match backend STYLE_PROMPTS keys
 
-const AI_MODELS = [
+export const AI_MODELS = [
     {
-        id: "graffiti",
-        name: "Urban Graffiti Edition",
+        id: "street-king",
         number: "01",
-        description: "Bold urban graffiti illustration. Spray paint, yellow & orange palette, high contrast street art.",
-        vibe: "STREET",
+        name: "Street King",
+        vibe: "🔥 STREET",
+        description:
+            "Turn your photo into a bold graffiti-inspired collectible lighter with urban street art aesthetics.",
         colors: ["#FFD60A", "#FF7A00", "#FFFFFF"],
         preview: {
-            bg: "linear-gradient(135deg, #1a1000 0%, #2a1800 50%, #0f0f0f 100%)",
+            bg: "linear-gradient(135deg,#1A1000 0%,#2D1700 45%,#101010 100%)",
             accent: "#FF7A00",
         },
+        prompt: `
+Use the uploaded image as the primary reference.
+
+Preserve the person's facial identity, hairstyle, facial proportions and expression.
+
+Transform the portrait into premium urban graffiti artwork.
+
+Style:
+- Modern street art
+- Spray paint textures
+- Yellow, orange, black and white palette
+- Bold outlines
+- High contrast
+- Dynamic paint splashes
+- Premium collectible illustration
+- Designer toy aesthetic
+- Youth culture
+- Clean composition
+
+Background must be completely transparent.
+
+The artwork must be vertically centered for lighter printing.
+
+Leave the bottom 20% empty for a QR code and logo.
+
+Ultra detailed.
+
+Transparent PNG.
+
+No text.
+
+No watermark.
+`,
     },
+
     {
-        id: "cyberpunk",
-        name: "Cyberpunk Anime Edition",
+        id: "neon-rebel",
         number: "02",
-        description: "Premium cyberpunk anime character. Neon glow, cel shading, electric energy effects.",
-        vibe: "NEON",
-        colors: ["#FFD60A", "#00FFFF", "#FF6B9D"],
+        name: "Neon Rebel",
+        vibe: "⚡ NEON",
+        description:
+            "Create a futuristic anime portrait with cyberpunk lighting and electric energy.",
+        colors: ["#FFD60A", "#00F5FF", "#FF5CF4"],
         preview: {
-            bg: "linear-gradient(135deg, #0a0a1a 0%, #001a2e 50%, #1a0a2e 100%)",
-            accent: "#00FFFF",
+            bg: "linear-gradient(135deg,#09111D 0%,#001D34 50%,#1A0925 100%)",
+            accent: "#00F5FF",
         },
+        prompt: `
+Use the uploaded image as the reference.
+
+Keep the person's identity recognizable.
+
+Transform the portrait into a premium cyberpunk anime character.
+
+Style:
+- Japanese anime illustration
+- Neon lighting
+- Electric energy
+- Yellow and cyan glow
+- Sharp cel shading
+- Cinematic composition
+- Premium digital painting
+- Gaming character
+- Futuristic fashion
+- High detail
+
+Background must be transparent.
+
+Vertical composition.
+
+Leave space at the bottom for a QR code and logo.
+
+No text.
+
+No watermark.
+
+Ultra detailed PNG.
+`,
     },
+
     {
-        id: "luxury",
-        name: "Luxury Gold Collector Edition",
+        id: "gold-legend",
         number: "03",
-        description: "Black & gold luxury editorial art. Metallic reflections, minimalistic premium composition.",
-        vibe: "PREMIUM",
-        colors: ["#FFD700", "#FFA500", "#111111"],
+        name: "Gold Legend",
+        vibe: "👑 LEGENDARY",
+        description:
+            "Luxury collector edition with black & gold styling inspired by premium fashion campaigns.",
+        colors: ["#FFD700", "#D4AF37", "#111111"],
         preview: {
-            bg: "linear-gradient(135deg, #1a1500 0%, #2a2000 50%, #111111 100%)",
+            bg: "linear-gradient(135deg,#181300 0%,#2C2100 55%,#101010 100%)",
             accent: "#FFD700",
         },
+        prompt: `
+Use the uploaded image as the primary reference.
+
+Preserve the person's identity with maximum accuracy.
+
+Transform the portrait into a luxury collector's edition artwork.
+
+Style:
+- Black and gold
+- Metallic reflections
+- Luxury editorial photography
+- Premium fashion campaign
+- Elegant geometric accents
+- Soft smoke
+- Dramatic lighting
+- Rich shadows
+- High-end designer aesthetic
+- Premium collectible product
+
+The background must be completely transparent.
+
+Vertical composition optimized for lighter printing.
+
+Reserve the bottom area for a QR code and logo.
+
+No text.
+
+No watermark.
+
+Ultra realistic.
+
+8K quality PNG.
+`,
     },
 ];
-
 const STEPS = ["Upload Photo", "Choose AI Style", "Generate & Checkout"];
 
 // ──────────────────────────────────────────────
